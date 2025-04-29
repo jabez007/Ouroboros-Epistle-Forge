@@ -1,0 +1,19 @@
+{
+  "project_name": "kafka_consumer",
+  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
+  "project_description": "Kafka consumer with topic-specific handlers",
+  "author_name": "Your Name",
+  "author_email": "your.email@example.com",
+  "python_version": "3.11",
+  "use_poetry": ["yes", "no"],
+  "use_docker": ["yes", "no"],
+  "include_tests": ["yes", "no"],
+  "include_prometheus_metrics": ["yes", "no"],
+  "include_schema_validation": ["yes", "no"],
+  "kafka_library": ["confluent-kafka", "aiokafka"],
+  "consumer_group_id": "my_consumer_group",
+  "default_topics": "topic1,topic2",
+  "default_bootstrap_servers": "localhost:9092",
+  "default_retries": 3,
+  "_copy_without_render": ["*.html", "*.j2"]
+}

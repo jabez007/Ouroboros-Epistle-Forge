@@ -1,0 +1,54 @@
+# Bytecode & Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Git & project metadata
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Tests & coverage
+.coverage
+.cache/
+.tox/
+.pytest_cache/
+htmlcov/
+
+# dotenv and local configs
+.env
+.env.*
+
+# Docker itself
+Dockerfile*
+docker-compose.yml
+
+# Logs
+*.log
+
+# Node (if present for UI/infra tooling)
+node_modules/
+

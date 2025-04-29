@@ -1,0 +1,24 @@
+{% if cookiecutter.use_poetry == 'yes' %}
+[tool.poetry]
+name = "{{ cookiecutter.project_slug }}"
+version = "0.1.0"
+description = "{{ cookiecutter.project_description }}"
+authors = ["{{ cookiecutter.author_name }} <{{ cookiecutter.author_email }}>"]
+packages = [{ include = "{{ cookiecutter.project_slug }}" }]
+
+[tool.poetry.dependencies]
+python = "^{{ cookiecutter.python_version }}"
+{% if cookiecutter.kafka_library == 'confluent-kafka' %}
+confluent-kafka = "^2.10"
+{% else %}
+aiokafka = "^0.12"
+{% endif %}
+pydantic = "^2.0"
+python-dotenv = { version = "^1.1", extras = ["cli"] }
+{% if cookiecutter.include_prometheus_metrics == 'yes' %}
+prometheus-client = "^0.18"
+{% endif %}
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.0"
+{% endif %}

@@ -1,8 +1,10 @@
 # Ouroboros-Epistle-Forge
 
-Inspired by the infinite cyclic nature of the Ouroboros, this toolkit streamlines the setup for scalable, efficient messaging workflows. Perfect for developers working with Kafka, RabbitMQ, or other queue systems.
+Inspired by the infinite cyclic nature of the Ouroboros, this toolkit streamlines the setup for scalable, efficient messaging workflows.
+Perfect for developers working with Kafka, RabbitMQ, or other queue systems.
 
-This template provides a foundation for building Python applications that consume messages from Kafka topics using a dependency injection pattern. It's designed to handle multiple topics with dedicated handlers while maintaining consistent message structure and reliable processing.
+This template provides a foundation for building Python applications that consume messages from Kafka topics using a dependency injection pattern.
+It's designed to handle multiple topics with dedicated handlers while maintaining consistent message structure and reliable processing.
 
 ## Features
 
@@ -38,7 +40,7 @@ All messages follow a consistent envelope pattern:
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - Access to a Kafka cluster
 - Poetry (recommended for dependency management)
 
@@ -51,7 +53,7 @@ All messages follow a consistent envelope pattern:
 
 2. Generate a new project:
    ```bash
-   cookiecutter gh:yourusername/kafka-consumer-template
+   cookiecutter gh:jabez007/ouroboros-epistle-forge
    ```
 
 3. Install dependencies:
@@ -75,27 +77,35 @@ KAFKA_ENABLE_AUTO_COMMIT=false
 
 ### Defining a Handler
 
-Create a new handler by implementing the `MessageHandler` interface:
+Create a new handler by implementing the `BaseHandler` interface:
 
 ```python
-from kafka_consumer.handlers import MessageHandler
-from kafka_consumer.models import Message
+""" In the `handlers` module """
+from .base import BaseHandler
+from ..models.envelope import MessageEnvelope
+from ..models.orders import CreateOrder
 
-class OrderCreatedHandler(MessageHandler):
+class OrderCreatedHandler(BaseHandler):
+    
     def __init__(self, some_dependency):
         self.some_dependency = some_dependency
-        
-    async def handle(self, message: Message) -> bool:
+
+    async def _process_message(self, message: MessageEnvelope) -> bool:
         # Process the message
-        order_data = message.body
+        order_data = CreatedOrder.from_dict(message.body)
         
         try:
             # Your business logic here
             await self.some_dependency.process_order(order_data)
+            # return True to commit offset
             return True
         except Exception as e:
-            # Returning False will route to DLQ
-            return False
+            if (e.message = "try again later"):
+                # return False to skip commiting offset
+                return False
+            else:
+                # Raise exception to route to DLQ
+                raise e 
 ```
 
 ### Registering Handlers
@@ -103,9 +113,9 @@ class OrderCreatedHandler(MessageHandler):
 In your application's entry point:
 
 ```python
-from kafka_consumer import Consumer
-from kafka_consumer.handlers import MessageRouter
-from your_app.handlers import OrderCreatedHandler
+from .consumer import KafkaConsumer
+from .handlers import OrderCreatedHandler
+from .services import OrderService
 
 async def main():
     # Create dependencies
@@ -114,18 +124,16 @@ async def main():
     # Create handlers
     order_handler = OrderCreatedHandler(order_service)
     
-    # Create router and register handlers
-    router = MessageRouter()
-    router.register("orders", order_handler)
-    
-    # Create and start consumer
-    consumer = Consumer(
+    # Create consumer
+    consumer = KafkaConsumer(
         bootstrap_servers="localhost:9092",
-        group_id="my-consumer-group",
-        topics=["orders", "shipments"],
-        router=router
+        group_id="my-consumer-group"
     )
+
+    # Register handlers
+    consumer.register_handler("orders", order_handler)
     
+    # Start consumer
     await consumer.start()
 
 if __name__ == "__main__":
@@ -165,29 +173,33 @@ The original message is wrapped in an error envelope:
 ## Project Structure
 
 ```
-├── kafka_consumer/
-│   ├── __init__.py
-│   ├── consumer.py         # Main consumer implementation
-│   ├── handlers.py         # Handler interface and router
-│   ├── models.py           # Message models and schemas
-│   └── dlq.py              # Dead letter queue functionality
+your-project-name/
+├── src/
+│   ├── main.py                # Application entry point
+│   ├── consumer.py            # Main consumer implementation
+│   ├── handlers/              # Handler interface and router
+│   │   ├── __init__.py
+│   │   ├── topic1_handler.py
+│   │   └── topic2_handler.py
+│   └── models/                # Message models and schemas
+│       ├── __init__.py
+│       ├── topic1_model.py
+│       └── topic2_model.py
 ├── tests/
 │   ├── __init__.py
 │   ├── test_consumer.py
-│   └── test_handlers.py
-├── examples/
-│   ├── simple_consumer.py
-│   └── multi_topic_consumer.py
-├── pyproject.toml          # Dependencies and project metadata
-├── .env.example            # Example environment configuration
-└── README.md               # This README
+│   ├── test_topic1_handler.py
+│   └── test_topic2_handler.py
+├── pyproject.toml             # Dependencies and project metadata
+├── .env                       # Environment configuration
+└── README.md                  # Project README
 ```
 
 ## Customization
 
 ### Message Validation
 
-Validation is performed using Pydantic. Extend or modify the base message models in `models.py` to add custom validation rules:
+Validation is performed using Pydantic. Extend or modify the base message models in `models` to add custom validation rules:
 
 ```python
 from kafka_consumer.models import BaseMessage, Header

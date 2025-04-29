@@ -98,7 +98,7 @@ class BaseHandler(abc.ABC):
                 return True
             
             # Extract retry count if present
-            retry_count = envelope.header.get("retry_count", 0)
+            retry_count = envelope.header.get("retryCount", 0)
             
             try:
                 # Process the message
@@ -111,7 +111,7 @@ class BaseHandler(abc.ABC):
                 if retry_count < self.max_retries:
                     logger.info(f"Retrying message, attempt {retry_count + 1} of {self.max_retries}")
                     # Increment retry count for next attempt
-                    envelope.header["retry_count"] = retry_count + 1
+                    envelope.header["retryCount"] = retry_count + 1
                     # Return False to prevent committing the offset
                     return False
                 else:

@@ -60,15 +60,15 @@ class KafkaConsumer:
         {% if cookiecutter.kafka_library == "confluent-kafka" %}
         # Configure Kafka consumer
         self.consumer = Consumer({
-            'bootstrap.servers': config.bootstrap_servers,
-            'group.id': config.group_id,
-            'auto.offset.reset': 'earliest',
+            'bootstrap.servers': self.config.bootstrap_servers,
+            'group.id': self.config.group_id,
+            'auto.offset.reset': self.config.auto_offset_reset,
             'enable.auto.commit': False,
         })
         
         # Configure dead letter queue producer
         self.dlq_producer = Producer({
-            'bootstrap.servers': config.bootstrap_servers,
+            'bootstrap.servers': self.config.bootstrap_servers,
         })
         {% elif cookiecutter.kafka_library == "aiokafka" %}
         # These will be initialized in start() for aiokafka
@@ -262,7 +262,7 @@ class KafkaConsumer:
             *topics,
             bootstrap_servers=self.config.bootstrap_servers,
             group_id=self.config.group_id,
-            auto_offset_reset='earliest',
+            auto_offset_reset=self.config.auto_offset_reset,
             enable_auto_commit=False,
         )
         

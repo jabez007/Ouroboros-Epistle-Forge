@@ -3,7 +3,7 @@ Base handler interface for processing Kafka messages.
 """
 import abc
 import logging
-from typing import Any, Callable, Dict
+from typing import Any, Awaitable, Callable, Dict
 
 {% if cookiecutter.include_schema_validation == "yes" %}
 import jsonschema
@@ -77,7 +77,7 @@ class BaseHandler(abc.ABC):
             send_to_dlq(f"Error parsing message envelope: {str(e)}")
             return True
     {% elif cookiecutter.kafka_library == "aiokafka" %}
-    async def handle(self, message_data: Dict[str, Any], send_to_dlq) -> bool:
+    async def handle(self, message_data: Dict[str, Any], send_to_dlq: Callable[[str], Awaitable[None]]) -> bool:
         """
         Process a message from Kafka.
         

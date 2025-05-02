@@ -27,9 +27,13 @@ class ConsumerConfig:
         if not self.bootstrap_servers:
             raise ValueError("KAFKA_BOOTSTRAP_SERVERS must not be empty")
         
+        # Validate group_id is not empty
+        if not self.group_id:
+            raise ValueError("KAFKA_GROUP_ID must not be empty")
+    
         # Validate auto_offset_reset is one of the expected values
         valid_offset_reset = ["earliest", "latest", "none"]
         if self.auto_offset_reset not in valid_offset_reset:
             raise ValueError(
                 f"KAFKA_AUTO_OFFSET_RESET must be one of: {', '.join(valid_offset_reset)}"
-            )
+     )

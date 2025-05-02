@@ -5,7 +5,7 @@ import datetime
 import json
 import logging
 import signal
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 {% if cookiecutter.kafka_library == "confluent-kafka" %}
 from confluent_kafka import Consumer, KafkaError, Producer
@@ -36,7 +36,7 @@ class KafkaConsumer:
     manages offset commits based on handler success.
     """
 
-    def __init__(self, config: ConsumerConfig):
+    def __init__(self, config: Optional[ConsumerConfig] = None):
         """
         Initialize the Kafka consumer with configuration.
         

@@ -29,6 +29,13 @@ services:
         - path: .
           patterns: ["*.py"]
           action: rebuild
+  
+  kcat:
+    image: edenhill/kcat:1.7.1
+    depends_on:
+      - kafka
+    entrypoint: /bin/bash
+    tty: true
 
 volumes:
   kafka_data:

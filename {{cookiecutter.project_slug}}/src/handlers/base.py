@@ -3,7 +3,12 @@ Base handler interface for processing Kafka messages.
 """
 import abc
 import logging
-from typing import Any, Awaitable, Callable, Dict
+from typing import Any, Callable, Dict
+
+{% if cookiecutter.kafka_library == "aiokafka" %}
+from typing import Awaitable
+
+{% endif %}
 
 {% if cookiecutter.include_schema_validation == "yes" %}
 import jsonschema

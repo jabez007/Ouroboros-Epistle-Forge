@@ -220,7 +220,8 @@ class KafkaConsumer:
                 json.dumps(dlq_message).encode('utf-8'),
                 callback=self._delivery_report
             )
-            self.dlq_producer.flush()
+            # allow delivery callback processing without blocking
+            self.dlq_producer.poll(0)
             
             logger.info(f"Message sent to DLQ topic {dlq_topic}")
             """

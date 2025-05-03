@@ -82,10 +82,16 @@ class KafkaConsumer:
         # Configure retry producer
         self.retry_producer = Producer({
             'bootstrap.servers': self.config.bootstrap_servers,
+            'retries': 3,
+            'retry.backoff.ms': 500,
+            'delivery.timeout.ms': 10000,
         })
         # Configure dead letter queue producer
         self.dlq_producer = Producer({
             'bootstrap.servers': self.config.bootstrap_servers,
+            'retries': 3,
+            'retry.backoff.ms': 500,
+            'delivery.timeout.ms': 10000,
         })
         {% elif cookiecutter.kafka_library == "aiokafka" %}
         # These will be initialized in start() for aiokafka

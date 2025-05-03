@@ -19,9 +19,9 @@ from aiokafka.structs import TopicPartition
 
 {% endif %}
 
-from ..handlers.base import BaseHandler
-from ..models.envelope import MessageEnvelope
-from .config import ConsumerConfig
+from src.consumer.config import ConsumerConfig
+from src.handlers.base import BaseHandler
+from src.models.envelope import MessageEnvelope
 
 """
 {% if cookiecutter.include_prometheus_metrics == "yes" %}

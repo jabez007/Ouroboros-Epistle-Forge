@@ -1,8 +1,8 @@
 import logging
 from typing import Any, Dict
 
-from ..models.envelope import MessageEnvelope
-from .base import BaseHandler
+from src.handlers.base import BaseHandler
+from src.models.envelope import MessageEnvelope
 
 logger = logging.getLogger(__name__)
 

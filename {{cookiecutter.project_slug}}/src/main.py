@@ -1,7 +1,7 @@
 import logging
 
-from .consumer.kafka import KafkaConsumer
-from .handlers.topic1 import Topic1Handler
+from src.consumer.kafka import KafkaConsumer
+from src.handlers.topic1 import Topic1Handler
 
 {% if cookiecutter.kafka_library == "confluent-kafka" %}
 def main():

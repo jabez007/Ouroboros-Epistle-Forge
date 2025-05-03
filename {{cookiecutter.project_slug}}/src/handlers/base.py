@@ -15,7 +15,7 @@ import jsonschema
 
 {% endif %}
 
-from ..models.envelope import MessageEnvelope
+from src.models.envelope import MessageEnvelope
 
 logger = logging.getLogger(__name__)
 

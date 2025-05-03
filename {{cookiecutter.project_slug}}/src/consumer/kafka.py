@@ -226,7 +226,7 @@ class KafkaConsumer:
             # Produce new message with updated headers
             self.retry_producer.produce(
                 retry_topic,
-                json.dumps(failed_message.to_dict()).encode("uf-8"),
+                json.dumps(failed_message.to_dict()).encode("utf-8"),
                 callback=self._delivery_report
             )
             # allow delivery callback processing without blocking

@@ -200,6 +200,10 @@ class KafkaConsumer:
         finally:
             logger.info("Closing consumer")
             self.consumer.close()
+            # Flush any pending messages and close producers
+            logger.info("Flushing and closing producers")
+            self.retry_producer.flush()
+            self.dlq_producer.flush()
 
     def _retry_message(self, original_topic: str, failed_message: MessageEnvelope, reason: str) -> None:
         """

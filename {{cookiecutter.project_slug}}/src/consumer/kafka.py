@@ -213,7 +213,7 @@ class KafkaConsumer:
         retry_topic = {{cookiecutter.retry_topic}}
 
         # Extract retry count if present
-        retry_count = failed_message.header.get("retryCount", 0)
+        retry_count = int(failed_message.header.get("retryCount", 0))
 
         # Increment retry count for next attempt
         failed_message.header["retryCount"] = retry_count + 1

@@ -56,7 +56,7 @@ class BaseHandler(abc.ABC):
                 return True
             
             # Extract retry count if present
-            retry_count = envelope.header.get("retryCount", 0)
+            retry_count = int(envelope.header.get("retryCount", 0))
             
             try:
                 # Process the message

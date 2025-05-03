@@ -35,6 +35,9 @@ class MessageEnvelope:
         if "header" not in data or "body" not in data:
             raise ValueError("Message must contain 'header' and 'body' sections")
 
+        if not isinstance(data["header"], dict) or not isinstance(data["body"], dict):
+            raise TypeError("'header' and 'body' must be dictionaries")
+
         return cls(header=data["header"], body=data["body"])
 
     def to_dict(self) -> Dict[str, Any]:

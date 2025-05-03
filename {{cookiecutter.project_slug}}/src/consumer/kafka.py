@@ -4,7 +4,9 @@ Kafka consumer implementation with dependency injection for handlers.
 import datetime
 import json
 import logging
+import random
 import signal
+from time import sleep
 from typing import Callable, Dict, Optional
 
 {% if cookiecutter.kafka_library == "confluent-kafka" %}
@@ -82,14 +84,14 @@ class KafkaConsumer:
         # Configure retry producer
         self.retry_producer = Producer({
             'bootstrap.servers': self.config.bootstrap_servers,
-            'retries': 3,
+            'message.send.max.retries': 3,
             'retry.backoff.ms': 500,
             'delivery.timeout.ms': 10000,
         })
         # Configure dead letter queue producer
         self.dlq_producer = Producer({
             'bootstrap.servers': self.config.bootstrap_servers,
-            'retries': 3,
+            'message.send.max.retries': 3,
             'retry.backoff.ms': 500,
             'delivery.timeout.ms': 10000,
         })
@@ -156,7 +158,7 @@ class KafkaConsumer:
                     # Parse message
                     try:
                         message_data = json.loads(msg.value().decode('utf-8'))
-                    except json.JSONDecodeError:
+                    except (UnicodeError, json.JSONDecodeError):
                         logger.error(f"Failed to decode message as JSON from topic {topic}")
                         self._send_to_dlq(topic, msg.value(), "Invalid JSON format")
                         self.consumer.commit(msg)
@@ -179,6 +181,7 @@ class KafkaConsumer:
                         """
                     else:
                         logger.warning(f"Handler returned False for message in topic {topic}")
+                        sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs. 
                         """
                         {% if cookiecutter.include_prometheus_metrics == "yes" %}
                         self.metrics.message_failed(topic, "handler_failure")
@@ -383,7 +386,7 @@ class KafkaConsumer:
                             # Parse message
                             try:
                                 message_data = json.loads(msg.value.decode('utf-8'))
-                            except json.JSONDecodeError:
+                            except (UnicodeError, json.JSONDecodeError):
                                 logger.error(f"Failed to decode message as JSON from topic {topic}")
                                 await self._send_to_dlq(topic, msg.value, "Invalid JSON format")
                                 tp = TopicPartition(msg.topic, msg.partition)

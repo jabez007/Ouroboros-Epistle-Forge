@@ -162,7 +162,7 @@ class KafkaConsumer:
                         continue
                     
                     # Process message
-                    success = handler.handle(message_data, self._get_dlq_callback(topic, msg.value()))
+                    success = handler.handle(message_data, self._get_retry_callback(topic), self._get_dlq_callback(topic, msg.value()))
                     
                     if success:
                         self.consumer.commit(msg)

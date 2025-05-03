@@ -36,4 +36,4 @@ class ConsumerConfig:
         if self.auto_offset_reset not in valid_offset_reset:
             raise ValueError(
                 f"KAFKA_AUTO_OFFSET_RESET must be one of: {', '.join(valid_offset_reset)}"
-     )
+            )

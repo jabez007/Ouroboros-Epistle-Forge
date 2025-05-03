@@ -8,7 +8,7 @@ import signal
 from typing import Callable, Dict, Optional
 
 {% if cookiecutter.kafka_library == "confluent-kafka" %}
-from confluent_kafka import Consumer, KafkaError, Producer
+from confluent_kafka import Consumer, KafkaError, Message, Producer
 
 {% elif cookiecutter.kafka_library == "aiokafka" %}
 import asyncio
@@ -20,6 +20,7 @@ from aiokafka.structs import TopicPartition
 {% endif %}
 
 from ..handlers.base import BaseHandler
+from ..models.envelope import MessageEnvelope
 from .config import ConsumerConfig
 
 """
@@ -77,7 +78,11 @@ class KafkaConsumer:
             'auto.offset.reset': self.config.auto_offset_reset,
             'enable.auto.commit': False,
         })
-        
+
+        # Configure retry producer
+        self.retry_producer = Producer({
+            'bootstrap.servers': self.config.bootstrap_servers,
+        })
         # Configure dead letter queue producer
         self.dlq_producer = Producer({
             'bootstrap.servers': self.config.bootstrap_servers,
@@ -85,6 +90,7 @@ class KafkaConsumer:
         {% elif cookiecutter.kafka_library == "aiokafka" %}
         # These will be initialized in start() for aiokafka
         self.consumer = None
+        self.retry_producer = None
         self.dlq_producer = None
         {% endif %}
 
@@ -119,7 +125,7 @@ class KafkaConsumer:
                 
                 if msg is None:
                     continue
-                
+    
                 if msg.error():
                     if msg.error().code() == KafkaError._PARTITION_EOF:
                         logger.debug(f"Reached end of partition {msg.partition()}")
@@ -195,6 +201,48 @@ class KafkaConsumer:
             logger.info("Closing consumer")
             self.consumer.close()
 
+    def _retry_message(self, original_topic: str, failed_message: MessageEnvelope, reason: str) -> None:
+        """
+        Send a message to the retry queue.
+        
+        Args:
+            original_topic: Original topic the message came from
+            failed_message: Envelope for failed message
+            reason: Reason for retrying message
+        """
+        retry_topic = {{cookiecutter.retry_topic}}
+
+        # Extract retry count if present
+        retry_count = failed_message.header.get("retryCount", 0)
+
+        # Increment retry count for next attempt
+        failed_message.header["retryCount"] = retry_count + 1
+
+        # Include metadata about original topic
+        failed_message.header["originalTopic"] = original_topic
+        failed_message.header["retryReason"] = reason
+
+        try:
+            # Produce new message with updated headers
+            self.retry_producer.produce(
+                retry_topic,
+                json.dumps(failed_message.to_dict()).encode("uf-8"),
+                callback=self._delivery_report
+            )
+            # allow delivery callback processing without blocking
+            self.retry_producer.poll(0)
+    
+            logger.info(f"Message sent to retry topic {retry_topic}, attempt {retry_count}")
+            """
+            {% if cookiecutter.include_prometheus_metrics == "yes" %}
+            self.metrics.message_retried(topic)
+            {% endif %}
+            """
+
+        except Exception as e:
+            logger.error(f"Failed to send retry message to retry {retry_topic}: {e}")
+
+
     def _send_to_dlq(self, original_topic: str, message: bytes, reason: str) -> None:
         """
         Send a message to the dead letter queue.
@@ -204,7 +252,7 @@ class KafkaConsumer:
             message: Original message bytes
             reason: Reason for sending to DLQ
         """
-        dlq_topic = f"{original_topic}.dlq"
+        dlq_topic = {{cookiecutter.dlq_topic}}
         
         try:
             # Create a wrapper that includes the original message and metadata
@@ -233,12 +281,26 @@ class KafkaConsumer:
         except Exception as e:
             logger.error(f"Failed to send message to DLQ {dlq_topic}: {e}")
 
-    def _delivery_report(self, err, msg) -> None:
+    def _delivery_report(self, err: Optional[Exception], msg: Message) -> None:
         """Callback for producer to report delivery success/failure."""
         if err is not None:
             logger.error(f"Message delivery failed: {err}")
         else:
-            logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+            logger.debug(f"Message delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}")
+
+    def _get_retry_callback(self, topic: str) -> Callable[[MessageEnvelope, str], None]:
+        """
+        Return a callback function for handlers to send messages to retry topic.
+        
+        Args:
+            topic: Original topic
+        
+        Returns:
+            Callable function that sends to retry topic
+        """
+        def retry_message(failed_message: MessageEnvelope, reason: str) -> None:
+            self._retry_message(topic, failed_message, reason)
+        return retry_message
 
     def _get_dlq_callback(self, topic: str, original_message: bytes) -> Callable[[str], None]:
         """

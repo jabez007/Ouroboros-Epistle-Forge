@@ -80,7 +80,7 @@ class BaseHandler(abc.ABC):
             send_to_dlq(f"Error parsing message envelope: {str(e)}")
             return True
     {% elif cookiecutter.kafka_library == "aiokafka" %}
-    async def handle(self, message_data: Dict[str, Any], send_to_dlq: Callable[[str], Awaitable[None]]) -> bool:
+    async def handle(self, message_data: Dict[str, Any], retry_message: Callable[[MessageEnvelope, str], Awaitable[None]], send_to_dlq: Callable[[str], Awaitable[None]]) -> bool:
         """
         Process a message from Kafka.
         
@@ -101,7 +101,7 @@ class BaseHandler(abc.ABC):
                 return True
             
             # Extract retry count if present
-            retry_count = envelope.header.get("retryCount", 0)
+            retry_count = int(envelope.header.get("retryCount", 0))
             
             try:
                 # Process the message
@@ -113,10 +113,8 @@ class BaseHandler(abc.ABC):
                 # Check if we should retry
                 if retry_count < self.max_retries:
                     logger.info(f"Retrying message, attempt {retry_count + 1} of {self.max_retries}")
-                    # Increment retry count for next attempt
-                    envelope.header["retryCount"] = retry_count + 1
-                    # Return False to prevent committing the offset
-                    return False
+                    await retry_message(envelope, str(e))
+                    return True
                 else:
                     logger.warning(f"Max retries ({self.max_retries}) reached, sending to DLQ")
                     await send_to_dlq(f"Max retries reached: {str(e)}")

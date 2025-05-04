@@ -9,10 +9,12 @@ class ConsumerConfig:
         )
         self.group_id = os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}")
         self.auto_offset_reset = os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").lower()
-        self.auto_commit_offset = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
         
         # Convert string values to appropriate types
-        self.auto_commit_offset = self._str_to_bool(self.auto_commit_offset)
+        raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
+        if raw_auto_commit.lower() not in ("true", "false", "1", "0", "yes", "no"):
+            raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
+        self.auto_commit_offset = self._str_to_bool(raw_auto_commit)
         
         # Validate values
         self._validate_config()

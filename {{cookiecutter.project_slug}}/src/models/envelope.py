@@ -52,8 +52,8 @@ class MessageEnvelope:
 
 # Common header fields and their descriptions
 COMMON_HEADER_FIELDS = {
-    "messageType": "",
-    "schemaName": "",
+    "messageType": "Type of message (e.g., 'event', 'command', 'notification')",
+    "schemaName": "Name of the schema defining the message structure",
     "schemaVersion": "Version of the message schema (optional)",
     "correlationId": "identifier linking related messages",
     "messageId": "Unique identifier for the message",

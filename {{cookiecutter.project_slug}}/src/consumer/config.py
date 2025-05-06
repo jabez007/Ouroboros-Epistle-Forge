@@ -3,6 +3,10 @@ import os
 
 class ConsumerConfig:
 
+    _TRUTHY_VALUES = ('true', '1', 'yes')
+    _FALSY_VALUES = ('false', '0', 'no')
+    _BOOLEAN_VALUES = _TRUTHY_VALUES + _FALSY_VALUES
+
     def __init__(self):
         self.bootstrap_servers = os.getenv(
             "KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}"
@@ -12,7 +16,7 @@ class ConsumerConfig:
         
         # Convert string values to appropriate types
         raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
-        if raw_auto_commit.lower() not in ("true", "false", "1", "0", "yes", "no"):
+        if raw_auto_commit.lower() not in self._BOOLEAN_VALUES:
             raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
         self.auto_commit_offset = self._str_to_bool(raw_auto_commit)
         
@@ -21,7 +25,7 @@ class ConsumerConfig:
 
     def _str_to_bool(self, value: str) -> bool:
         """Convert string 'true'/'false' to boolean."""
-        return value.lower() in ('true', '1', 'yes')
+        return value.lower() in self._TRUTHY_VALUES
     
     def _validate_config(self) -> None:
         """Validate configuration values."""

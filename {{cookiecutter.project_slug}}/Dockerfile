@@ -9,7 +9,7 @@ WORKDIR /app
 RUN adduser --disabled-password --gecos "" appuser
 
 # Optional: install system deps
-RUN apt-get update && \
+RUN apt-get update -y && \
     apt-get install -y \
         curl \
     && rm -rf /var/lib/apt/lists/*

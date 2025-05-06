@@ -70,7 +70,11 @@ class KafkaConsumer:
                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_shutdown(s)))
             except NotImplementedError:
                 # Fallback for Windows / non-main thread
-                signal.signal(sig, lambda s=sig, *_: asyncio.create_task(self._handle_shutdown(s)))
+                def _sync_shutdown_handler(_sig, _frame):
+                    loop = asyncio.get_event_loop()
+                    loop.call_soon_threadsafe(asyncio.create_task, self._handle_shutdown(_sig))
+
+                signal.signal(sig, _sync_shutdown_handler)
         {% endif %}
 
         {% if cookiecutter.kafka_library == "confluent-kafka" %}
@@ -233,18 +237,20 @@ class KafkaConsumer:
             logger.warning(f"Invalid retryCount value: {failed_message.header.get('retryCount')}, using 0")
             retry_count = 0
 
+        envelope_copy = MessageEnvelope.from_dict(failed_message.to_dict())
+
         # Increment retry count for next attempt
-        failed_message.header["retryCount"] = retry_count + 1
+        envelope_copy.header["retryCount"] = retry_count + 1
 
         # Include metadata about original topic
-        failed_message.header["originalTopic"] = original_topic
-        failed_message.header["retryReason"] = reason
+        envelope_copy.header["originalTopic"] = original_topic
+        envelope_copy.header["retryReason"] = reason
 
         try:
             # Produce new message with updated headers
             self.retry_producer.produce(
                 retry_topic,
-                json.dumps(failed_message.to_dict()).encode("utf-8"),
+                json.dumps(envelope_copy.to_dict()).encode("utf-8"),
                 callback=self._delivery_report
             )
             # allow delivery callback processing without blocking
@@ -412,11 +418,7 @@ class KafkaConsumer:
                             retry_callback = self._get_retry_callback(topic)
                             dlq_callback = self._get_dlq_callback(topic, msg.value)
                             
-                            # Handle synchronous or async handler
-                            if asyncio.iscoroutinefunction(handler.handle):
-                                success = await handler.handle(message_data, retry_callback, dlq_callback)
-                            else:
-                                success = handler.handle(message_data, retry_callback, dlq_callback)
+                            success = await handler.handle(message_data, retry_callback, dlq_callback)
                             
                             if success:
                                 tp = TopicPartition(msg.topic, msg.partition)
@@ -481,17 +483,19 @@ class KafkaConsumer:
             logger.warning(f"Invalid retryCount value: {failed_message.header.get('retryCount')}, using 0")
             retry_count = 0
 
+        envelope_copy = MessageEnvelope.from_dict(failed_message.to_dict())
+
         # Increment retry count for next attempt
-        failed_message.header["retryCount"] = retry_count + 1
+        envelope_copy.header["retryCount"] = retry_count + 1
 
         # Include metadata about original topic
-        failed_message.header["originalTopic"] = original_topic
-        failed_message.header["retryReason"] = reason
+        envelope_copy.header["originalTopic"] = original_topic
+        envelope_copy.header["retryReason"] = reason
 
         try:
             await self.retry_producer.send_and_wait(
                 retry_topic,
-                json.dumps(failed_message.to_dict()).encode('utf-8')
+                json.dumps(envelope_copy.to_dict()).encode('utf-8')
             )
             
             logger.info(f"Message sent to retry topic {retry_topic}, attempt {retry_count}")

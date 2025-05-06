@@ -147,11 +147,10 @@ class BaseHandler(abc.ABC):
             bool: True if message is valid, False otherwise
         """
         # Validate required header fields
-        required_fields = ["messageType", "timestamp", "producer"]
-        for field in required_fields:
-            if field not in envelope.header:
-                logger.error(f"Missing required header field: {field}")
-                return False
+        missing = [f for f in MessageEnvelope._REQUIRED_HEADERS if f not in envelope.header]
+        if missing:
+            logger.error(f"Missing required header fields: {', '.join(missing)}")
+            return False
         
         {% if cookiecutter.include_schema_validation == "yes" %}
         # Apply schema validation if enabled

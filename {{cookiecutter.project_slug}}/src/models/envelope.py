@@ -15,8 +15,26 @@ class MessageEnvelope:
     across all topics. The body contains topic-specific data.
     """
 
+    _REQUIRED_HEADERS = ["messageType", "schemaName", "correlationId", "messageId", "timestamp", "producer"]
+
     header: Dict[str, Any]
     body: Dict[str, Any]
+
+    def __init__(self, header: dict, body: dict):
+         self._validate_header(header)
+         self.header = header
+         self.body = body
+
+    def _validate_header(self, header: dict) -> None:
+         # define required and allowed headers 
+         missing = [k for k in self._REQUIRED_HEADERS if k not in header]
+         if missing:
+             raise ValueError(f"Missing required header fields: {missing}")
+
+         # catch any unexpected header keys
+         unexpected = [k for k in header if k not in COMMON_HEADER_FIELDS]
+         if unexpected:
+             raise ValueError(f"Unexpected header fields: {unexpected}")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MessageEnvelope":
@@ -31,6 +49,7 @@ class MessageEnvelope:
 
         Raises:
             ValueError: If the dictionary is missing required fields
+            TypeError: If header or body is not a dictionary
         """
         if "header" not in data or "body" not in data or not data["header"] or not data["body"]:
             raise ValueError("Message must contain 'header' and 'body' sections")

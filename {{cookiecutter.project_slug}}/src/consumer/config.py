@@ -1,7 +1,15 @@
 import os
 
+"""
+Centralised Kafka consumer configuration loaded from environment variables.
+
+Example:
+    >>> cfg = ConsumerConfig()
+    >>> print(cfg.bootstrap_servers, cfg.group_id)
+"""
 
 class ConsumerConfig:
+    """Validated environment-driven configuration for a Kafka consumer."""
 
     _TRUTHY_VALUES = {'true', '1', 'yes'}
     _FALSY_VALUES = {'false', '0', 'no'}

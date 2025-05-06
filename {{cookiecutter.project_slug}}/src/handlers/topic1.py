@@ -1,5 +1,9 @@
 import logging
+
+{% if cookiecutter.include_schema_validation == "yes" %}
 from typing import Any, Dict
+
+{% endif %}
 
 from src.handlers.base import BaseHandler
 from src.models.envelope import MessageEnvelope

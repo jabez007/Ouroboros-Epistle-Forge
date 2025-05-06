@@ -64,17 +64,7 @@ class KafkaConsumer:
         signal.signal(signal.SIGTERM, self._handle_shutdown)
         signal.signal(signal.SIGINT, self._handle_shutdown)
         {% elif cookiecutter.kafka_library == "aiokafka" %}
-        loop = asyncio.get_event_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            try:
-                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_shutdown(s)))
-            except NotImplementedError:
-                # Fallback for Windows / non-main thread
-                def _sync_shutdown_handler(_sig, _frame):
-                    loop = asyncio.get_event_loop()
-                    loop.call_soon_threadsafe(asyncio.create_task, self._handle_shutdown(_sig))
-
-                signal.signal(sig, _sync_shutdown_handler)
+        # Defer signal-handler registration until you’re inside the running loop
         {% endif %}
 
         {% if cookiecutter.kafka_library == "confluent-kafka" %}
@@ -374,6 +364,20 @@ class KafkaConsumer:
         )
         
         await self.consumer.start()
+
+        # register signals on the running loop
+        loop = asyncio.get_event_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            try:
+                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_shutdown(s)))
+            except NotImplementedError:
+                # Fallback for Windows / non-main thread
+                def _sync_shutdown_handler(_sig, _frame):
+                    loop = asyncio.get_event_loop()
+                    loop.call_soon_threadsafe(asyncio.create_task, self._handle_shutdown(_sig))
+
+                signal.signal(sig, _sync_shutdown_handler)
+        
         await self.retry_producer.start()
         await self.dlq_producer.start()
         
@@ -461,9 +465,12 @@ class KafkaConsumer:
                     
         finally:
             logger.info("Closing consumer and producers")
-            await self.consumer.stop()
-            await self.retry_producer.stop()
-            await self.dlq_producer.stop()
+            if getattr(self, "consumer", None) and self.consumer._closed is False:
+                await self.consumer.stop()
+            if getattr(self, "retry_producer", None) and self.retry_producer._closed is False:
+                await self.retry_producer.stop()
+            if getattr(self, "dlq_producer", None) and self.dlq_producer._closed is False:
+                await self.dlq_producer.stop()
 
     async def _retry_message(self, original_topic: str, failed_message: MessageEnvelope, reason: str) -> None:
         """
@@ -576,10 +583,10 @@ class KafkaConsumer:
         """Handle shutdown signals gracefully."""
         logger.info("Received signal %s, shutting down…", signum)
         self.running = False
-        if self.consumer is not None:
+        if getattr(self, "consumer", None) and self.consumer._closed is False:
             await self.consumer.stop()
-        if self.retry_producer is not None:
+        if getattr(self, "retry_producer", None) and self.retry_producer._closed is False:
             await self.retry_producer.stop()
-        if self.dlq_producer is not None:
+        if getattr(self, "dlq_producer", None) and self.dlq_producer._closed is False:
             await self.dlq_producer.stop()
     {% endif %}

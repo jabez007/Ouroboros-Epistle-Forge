@@ -44,7 +44,8 @@ htmlcov/
 
 # Docker itself
 Dockerfile*
-docker-compose.yml
+docker-compose.y[a]ml
+compose.y[a]ml
 
 # Logs
 *.log

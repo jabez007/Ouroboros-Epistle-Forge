@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass, field
 
 """
 Centralised Kafka consumer configuration loaded from environment variables.
@@ -8,6 +9,7 @@ Example:
     >>> print(cfg.bootstrap_servers, cfg.group_id)
 """
 
+@dataclass(frozen=True, slots=True)
 class ConsumerConfig:
     """Validated environment-driven configuration for a Kafka consumer."""
 
@@ -17,19 +19,18 @@ class ConsumerConfig:
 
     _VALID_OFFSET_RESET = ("earliest", "latest", "none")
 
-    def __init__(self):
-        self.bootstrap_servers = os.getenv(
-            "KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}"
-        )
-        self.group_id = os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}")
-        self.auto_offset_reset = os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").lower()
-        
+    bootstrap_servers: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}")
+    group_id: str = os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}")
+    auto_offset_reset: str = os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold()
+    auto_commit_offset: bool = field(init=False)
+
+    def __post_init__(self):        
         # Convert string values to appropriate types
         raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
         if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:
             raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
-        self.auto_commit_offset = self._str_to_bool(raw_auto_commit)
-        
+        object.__setattr__(self, 'auto_commit_offset', self._str_to_bool(raw_auto_commit))
+
         # Validate values
         self._validate_config()
 

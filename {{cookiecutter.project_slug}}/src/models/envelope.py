@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 
-@dataclass
+@dataclass(slots=True)
 class MessageEnvelope:
     """
     Message envelope with header and body sections.
@@ -15,15 +15,13 @@ class MessageEnvelope:
     across all topics. The body contains topic-specific data.
     """
 
-    _REQUIRED_HEADERS = ["messageType", "schemaName", "correlationId", "messageId", "timestamp", "producer"]
+    _REQUIRED_HEADERS = ("messageType", "schemaName", "correlationId", "messageId", "timestamp", "producer")
 
     header: Dict[str, Any]
     body: Dict[str, Any]
 
-    def __init__(self, header: dict, body: dict):
-         self._validate_header(header)
-         self.header = header
-         self.body = body
+    def __post_init__(self) -> None:
+         self._validate_header(self.header)
 
     def _validate_header(self, header: dict) -> None:
          # define required and allowed headers 

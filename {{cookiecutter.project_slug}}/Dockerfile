@@ -8,13 +8,13 @@ WORKDIR /app
 # Create a non-root user
 RUN adduser --disabled-password --gecos "" appuser
 
+{% if cookiecutter.use_poetry == 'yes' %}
 # Optional: install system deps
 RUN apt-get update -y && \
     apt-get install -y \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-{% if cookiecutter.use_poetry == 'yes' %}
 # ---- Poetry Setup ----
 RUN curl -sSL https://install.python-poetry.org | python3 - && \
     ln -s /root/.local/bin/poetry /usr/local/bin/poetry
@@ -41,5 +41,5 @@ USER appuser
 
 # Default CMD to run consumer
 ENTRYPOINT [ "python" ]
-CMD [ "./src/main.py" ]
+CMD [ "/app/src/main.py" ]
 

@@ -24,7 +24,7 @@ class ConsumerConfig:
     auto_offset_reset: str = os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold()
     auto_commit_offset: bool = field(init=False)
 
-    def __post_init__(self):        
+    def __post_init__(self): 
         # Convert string values to appropriate types
         raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
         if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:

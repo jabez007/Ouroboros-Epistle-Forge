@@ -5,6 +5,22 @@ Message envelope model that follows a SOAP-like structure with header and body.
 from dataclasses import dataclass
 from typing import Any, Dict
 
+# Common header fields and their descriptions
+COMMON_HEADER_FIELDS = {
+    "messageType": "Type of message (e.g., 'event', 'command', 'notification')",
+    "schemaName": "Name of the schema defining the message structure",
+    "schemaVersion": "Version of the message schema (optional)",
+    "correlationId": "identifier linking related messages",
+    "messageId": "Unique identifier for the message",
+    "timestamp": "ISO 8601 timestamp when the message was created",
+    "producer": "System or service that created the message",
+    "contentType": "Content type of the body (optional)",
+    "replyTo": "Topic to reply to (optional)",
+    "priority": "Message priority (optional)",
+    "ttl": "Time-to-live in seconds (optional)",
+    "retryCount": "Number of retry attempts (optional, used internally)",
+}
+
 
 @dataclass(slots=True)
 class MessageEnvelope:
@@ -68,20 +84,3 @@ class MessageEnvelope:
             Dict: Dictionary representation of the envelope
         """
         return {"header": self.header, "body": self.body}
-
-
-# Common header fields and their descriptions
-COMMON_HEADER_FIELDS = {
-    "messageType": "Type of message (e.g., 'event', 'command', 'notification')",
-    "schemaName": "Name of the schema defining the message structure",
-    "schemaVersion": "Version of the message schema (optional)",
-    "correlationId": "identifier linking related messages",
-    "messageId": "Unique identifier for the message",
-    "timestamp": "ISO 8601 timestamp when the message was created",
-    "producer": "System or service that created the message",
-    "contentType": "Content type of the body (optional)",
-    "replyTo": "Topic to reply to (optional)",
-    "priority": "Message priority (optional)",
-    "ttl": "Time-to-live in seconds (optional)",
-    "retryCount": "Number of retry attempts (optional, used internally)",
-}

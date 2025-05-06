@@ -59,7 +59,7 @@ class BaseHandler(abc.ABC):
             # Extract retry count if present
             try:
                 retry_count = int(envelope.header.get("retryCount", 0))
-            except ValueError:
+            except (ValueError, TypeError):
                 logger.warning(f"Invalid retryCount value: {envelope.header.get('retryCount')}, using 0")
                 retry_count = 0
             
@@ -109,7 +109,7 @@ class BaseHandler(abc.ABC):
             # Extract retry count if present
             try:
                 retry_count = int(envelope.header.get("retryCount", 0))
-            except ValueError:
+            except (ValueError, TypeError):
                 logger.warning(f"Invalid retryCount value: {envelope.header.get('retryCount')}, using 0")
                 retry_count = 0
 

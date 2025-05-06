@@ -30,7 +30,8 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 COPY requirements.txt /app/
 
 # Install dependencies
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 {% endif %}
 
 # Copy project files
@@ -39,5 +40,6 @@ COPY . /app/
 USER appuser
 
 # Default CMD to run consumer
-CMD [ "python", "./src/main.py" ]
+ENTRYPOINT [ "python" ]
+CMD [ "./src/main.py" ]
 

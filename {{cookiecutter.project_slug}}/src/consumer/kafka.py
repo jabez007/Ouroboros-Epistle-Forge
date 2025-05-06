@@ -92,9 +92,9 @@ class KafkaConsumer:
         })
         {% elif cookiecutter.kafka_library == "aiokafka" %}
         # These will be initialized in start() for aiokafka
-        self.consumer = None
-        self.retry_producer = None
-        self.dlq_producer = None
+        self.consumer: Optional[AIOKafkaConsumer] = None
+        self.retry_producer: Optional[AIOKafkaProducer] = None
+        self.dlq_producer: Optional[AIOKafkaProducer] = None
         {% endif %}
 
     def register_handler(self, topic: str, handler: BaseHandler) -> None:
@@ -230,7 +230,7 @@ class KafkaConsumer:
         envelope_copy = MessageEnvelope.from_dict(failed_message.to_dict())
 
         # Increment retry count for next attempt
-        envelope_copy.header["retryCount"] = retry_count + 1
+        envelope_copy.header["retryCount"] = str(retry_count + 1)
 
         # Include metadata about original topic
         envelope_copy.header["originalTopic"] = original_topic
@@ -366,14 +366,14 @@ class KafkaConsumer:
         await self.consumer.start()
 
         # register signals on the running loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
             try:
                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_shutdown(s)))
             except NotImplementedError:
                 # Fallback for Windows / non-main thread
                 def _sync_shutdown_handler(_sig, _frame):
-                    loop = asyncio.get_event_loop()
+                    loop = asyncio.get_running_loop()
                     loop.call_soon_threadsafe(asyncio.create_task, self._handle_shutdown(_sig))
 
                 signal.signal(sig, _sync_shutdown_handler)
@@ -493,7 +493,7 @@ class KafkaConsumer:
         envelope_copy = MessageEnvelope.from_dict(failed_message.to_dict())
 
         # Increment retry count for next attempt
-        envelope_copy.header["retryCount"] = retry_count + 1
+        envelope_copy.header["retryCount"] = str(retry_count + 1)
 
         # Include metadata about original topic
         envelope_copy.header["originalTopic"] = original_topic
@@ -534,7 +534,7 @@ class KafkaConsumer:
                 "original_topic": original_topic,
                 "timestamp": datetime.datetime.now().isoformat()
             }
-            
+
             await self.dlq_producer.send_and_wait(
                 dlq_topic,
                 json.dumps(dlq_message).encode('utf-8')

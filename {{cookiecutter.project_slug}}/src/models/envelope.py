@@ -21,18 +21,18 @@ class MessageEnvelope:
     body: Dict[str, Any]
 
     def __post_init__(self) -> None:
-         self._validate_header(self.header)
+        self._validate_header(self.header)
 
     def _validate_header(self, header: dict) -> None:
-         # define required and allowed headers 
-         missing = [k for k in self._REQUIRED_HEADERS if k not in header]
-         if missing:
-             raise ValueError(f"Missing required header fields: {missing}")
+        # define required and allowed headers 
+        missing = [k for k in self._REQUIRED_HEADERS if k not in header]
+        if missing:
+            raise ValueError(f"Missing required header fields: {missing}")
 
-         # catch any unexpected header keys
-         unexpected = [k for k in header if k not in COMMON_HEADER_FIELDS]
-         if unexpected:
-             raise ValueError(f"Unexpected header fields: {unexpected}")
+        # catch any unexpected header keys
+        unexpected = [k for k in header if k not in COMMON_HEADER_FIELDS]
+        if unexpected:
+            raise ValueError(f"Unexpected header fields: {unexpected}")
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MessageEnvelope":
@@ -49,9 +49,12 @@ class MessageEnvelope:
             ValueError: If the dictionary is missing required fields
             TypeError: If header or body is not a dictionary
         """
-        if "header" not in data or "body" not in data or not data["header"] or not data["body"]:
+
+        # A schema might legitimately allow {} in the body (e.g., a ping event).
+        if "header" not in data or "body" not in data or not data["header"]:
             raise ValueError("Message must contain 'header' and 'body' sections")
 
+        # Header must be truthy because required keys will be validated later
         if not isinstance(data["header"], dict) or not isinstance(data["body"], dict):
             raise TypeError("'header' and 'body' must be dictionaries")
 

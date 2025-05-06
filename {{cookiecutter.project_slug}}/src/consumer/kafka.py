@@ -467,12 +467,17 @@ class KafkaConsumer:
                     
         finally:
             logger.info("Closing consumer and producers")
-            if getattr(self, "consumer", None) and self.consumer._closed is False:
-                await self.consumer.stop()
-            if getattr(self, "retry_producer", None) and self.retry_producer._closed is False:
-                await self.retry_producer.stop()
-            if getattr(self, "dlq_producer", None) and self.dlq_producer._closed is False:
-                await self.dlq_producer.stop()
+            await self._shutdown_resources()
+
+    async def _shutdown_resources(self):
+        """Shutdown all resources in the correct order."""
+        logger.info("Closing producers and consumer")
+        if getattr(self, "consumer", None) and self.consumer._closed is False:
+            await self.consumer.stop()
+        if getattr(self, "retry_producer", None) and self.retry_producer._closed is False:
+            await self.retry_producer.stop()
+        if getattr(self, "dlq_producer", None) and self.dlq_producer._closed is False:
+            await self.dlq_producer.stop()
 
     async def _retry_message(self, original_topic: str, failed_message: MessageEnvelope, reason: str) -> None:
         """
@@ -587,10 +592,5 @@ class KafkaConsumer:
         """Handle shutdown signals gracefully."""
         logger.info("Received signal %s, shutting down…", signum)
         self.running = False
-        if getattr(self, "consumer", None) and self.consumer._closed is False:
-            await self.consumer.stop()
-        if getattr(self, "retry_producer", None) and self.retry_producer._closed is False:
-            await self.retry_producer.stop()
-        if getattr(self, "dlq_producer", None) and self.dlq_producer._closed is False:
-            await self.dlq_producer.stop()
+        await self._shutdown_resources()
     {% endif %}

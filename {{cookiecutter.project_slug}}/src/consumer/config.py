@@ -3,9 +3,11 @@ import os
 
 class ConsumerConfig:
 
-    _TRUTHY_VALUES = ('true', '1', 'yes')
-    _FALSY_VALUES = ('false', '0', 'no')
-    _BOOLEAN_VALUES = _TRUTHY_VALUES + _FALSY_VALUES
+    _TRUTHY_VALUES = {'true', '1', 'yes'}
+    _FALSY_VALUES = {'false', '0', 'no'}
+    _BOOLEAN_VALUES = _TRUTHY_VALUES | _FALSY_VALUES
+
+    _VALID_OFFSET_RESET = ("earliest", "latest", "none")
 
     def __init__(self):
         self.bootstrap_servers = os.getenv(
@@ -16,7 +18,7 @@ class ConsumerConfig:
         
         # Convert string values to appropriate types
         raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
-        if raw_auto_commit.lower() not in self._BOOLEAN_VALUES:
+        if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:
             raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
         self.auto_commit_offset = self._str_to_bool(raw_auto_commit)
         
@@ -25,7 +27,7 @@ class ConsumerConfig:
 
     def _str_to_bool(self, value: str) -> bool:
         """Convert string 'true'/'false' to boolean."""
-        return value.lower() in self._TRUTHY_VALUES
+        return value.casefold() in self._TRUTHY_VALUES
     
     def _validate_config(self) -> None:
         """Validate configuration values."""
@@ -38,8 +40,7 @@ class ConsumerConfig:
             raise ValueError("KAFKA_GROUP_ID must not be empty")
     
         # Validate auto_offset_reset is one of the expected values
-        valid_offset_reset = ["earliest", "latest", "none"]
-        if self.auto_offset_reset not in valid_offset_reset:
+        if self.auto_offset_reset not in self._VALID_OFFSET_RESET:
             raise ValueError(
-                f"KAFKA_AUTO_OFFSET_RESET must be one of: {', '.join(valid_offset_reset)}"
+                f"KAFKA_AUTO_OFFSET_RESET must be one of: {', '.join(self._VALID_OFFSET_RESET)}"
             )

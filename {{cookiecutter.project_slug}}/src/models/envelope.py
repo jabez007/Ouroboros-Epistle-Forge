@@ -32,7 +32,7 @@ class MessageEnvelope:
         Raises:
             ValueError: If the dictionary is missing required fields
         """
-        if "header" not in data or "body" not in data:
+        if "header" not in data or "body" not in data or not data["header"] or not data["body"]:
             raise ValueError("Message must contain 'header' and 'body' sections")
 
         if not isinstance(data["header"], dict) or not isinstance(data["body"], dict):

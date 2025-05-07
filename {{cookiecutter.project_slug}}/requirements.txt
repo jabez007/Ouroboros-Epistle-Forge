@@ -1,11 +1,10 @@
 {% if cookiecutter.use_poetry == 'no' %}
 {% if cookiecutter.kafka_library == 'confluent-kafka' %}
 confluent-kafka==2.10.*
-{% else %}
+{% elif cookiecutter.kafka_library == 'aiokafka' %}
 aiokafka==0.12.*
 {% endif %}
 pydantic==2.*
-python-dotenv==1.*
 python-dotenv[cli]==1.*
 {% if cookiecutter.include_prometheus_metrics == 'yes' %}
 prometheus-client==0.18.*

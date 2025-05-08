@@ -1,10 +1,5 @@
 import logging
 
-{% if cookiecutter.include_schema_validation == "yes" %}
-from typing import Any, Dict
-
-{% endif %}
-
 from src.handlers.base import BaseHandler
 from src.models.envelope import MessageEnvelope
 
@@ -41,18 +36,4 @@ class Topic1Handler(BaseHandler):
             # - Return True to commit and effectively skip the message
             # Consider the implications for your specific use case
             return False
-    {% endif %}
-
-    {% if cookiecutter.include_schema_validation == "yes" %}
-    def _validate_body_schema(self, body: Dict[str, Any]) -> None:
-        """
-        Validate message body against schema.
-        
-        Args:
-            body: Message body to validate
-            
-        Raises:
-            jsonschema.exceptions.ValidationError: If validation fails
-        """
-        pass
     {% endif %}

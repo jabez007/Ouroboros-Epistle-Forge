@@ -8,7 +8,6 @@
   "use_poetry": ["no", "yes"],
   "include_tests": ["yes", "no"],
   "include_prometheus_metrics": ["no", "yes"],
-  "include_schema_validation": ["yes", "no"],
   "kafka_library": ["aiokafka", "confluent-kafka"],
   "default_bootstrap_servers": "localhost:9092",
   "consumer_group_id": "my_consumer_group",

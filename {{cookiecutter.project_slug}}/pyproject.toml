@@ -10,7 +10,7 @@ packages = [{ include = "{{ cookiecutter.project_slug }}" }]
 python = "^{{ cookiecutter.python_version }}"
 {% if cookiecutter.kafka_library == 'confluent-kafka' %}
 confluent-kafka = "^2.10"
-{% else %}
+{% elif cookiecutter.kafka_library == 'aiokafka' %}
 aiokafka = "^0.12"
 {% endif %}
 pydantic = "^2.0"

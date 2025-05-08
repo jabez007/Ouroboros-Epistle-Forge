@@ -10,11 +10,6 @@ from typing import Awaitable
 
 {% endif %}
 
-{% if cookiecutter.include_schema_validation == "yes" %}
-import jsonschema
-
-{% endif %}
-
 from src.models.envelope import MessageEnvelope
 
 logger = logging.getLogger(__name__)
@@ -50,11 +45,6 @@ class BaseHandler(abc.ABC):
         try:
             # Parse the envelope structure
             envelope = MessageEnvelope.from_dict(message_data)
-            
-            # Validate the message format
-            if not self._validate_message(envelope):
-                send_to_dlq("Invalid message format")
-                return True
             
             # Extract retry count if present
             try:
@@ -101,12 +91,6 @@ class BaseHandler(abc.ABC):
             # Parse the envelope structure
             envelope = MessageEnvelope.from_dict(message_data)
             
-            # Validate the message format
-            if not self._validate_message(envelope):
-                await send_to_dlq("Invalid message format")
-                return True
-            
-            # Extract retry count if present
             try:
                 retry_count = int(envelope.header.get("retryCount", 0))
             except (ValueError, TypeError):
@@ -134,65 +118,6 @@ class BaseHandler(abc.ABC):
             logger.exception(f"Error parsing message envelope: {e}")
             await send_to_dlq(f"Error parsing message envelope: {str(e)}")
             return True
-    {% endif %}
-    
-    def _validate_message(self, envelope: MessageEnvelope) -> bool:
-        """
-        Validate message format.
-        
-        Args:
-            envelope: Message envelope to validate
-            
-        Returns:
-            bool: True if message is valid, False otherwise
-        """
-        # Validate required header fields
-        missing = [f for f in MessageEnvelope._REQUIRED_HEADERS if f not in envelope.header]
-        if missing:
-            logger.error(f"Missing required header fields: {', '.join(missing)}")
-            return False
-        
-        {% if cookiecutter.include_schema_validation == "yes" %}
-        # Apply schema validation if enabled
-        try:
-            self._validate_schema(envelope)
-        except jsonschema.exceptions.ValidationError as e:
-            logger.error(f"Schema validation failed: {e}")
-            return False
-        {% endif %}
-        
-        return True
-    
-    {% if cookiecutter.include_schema_validation == "yes" %}
-    def _validate_schema(self, envelope: MessageEnvelope) -> None:
-        """
-        Validate message against JSON schema.
-        
-        Args:
-            envelope: Message envelope to validate
-            
-        Raises:
-            jsonschema.exceptions.ValidationError: If validation fails
-        """
-        # Header schema validation
-        from {{cookiecutter.project_slug}}.schemas import get_header_schema
-        jsonschema.validate(envelope.header, get_header_schema())
-        
-        # Body schema validation (implemented by subclasses)
-        self._validate_body_schema(envelope.body)
-    
-    @abc.abstractmethod
-    def _validate_body_schema(self, body: Dict[str, Any]) -> None:
-        """
-        Validate message body against schema.
-        
-        Args:
-            body: Message body to validate
-            
-        Raises:
-            jsonschema.exceptions.ValidationError: If validation fails
-        """
-        pass
     {% endif %}
     
     {% if cookiecutter.kafka_library == "confluent-kafka" %}

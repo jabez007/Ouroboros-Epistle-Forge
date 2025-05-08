@@ -34,8 +34,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 {% endif %}
 
-# Copy project files
-COPY . /app/
+# Copy project files with appropriate ownership
+COPY --chown=appuser:appuser . /app/
 
 USER appuser
 
@@ -43,3 +43,6 @@ USER appuser
 ENTRYPOINT [ "python" ]
 CMD [ "/app/src/main.py" ]
 
+# Health check - assumes your application responds to SIGTERM for graceful shutdown
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ps -ef | grep -v grep | grep "python /app/src/main.py" || exit 1

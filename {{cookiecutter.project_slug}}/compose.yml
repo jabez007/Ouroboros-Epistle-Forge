@@ -34,6 +34,8 @@ services:
 
   kcat:
     image: edenhill/kcat:1.7.1
+    environment:
+      - KAFKA_BROKERS=kafka:9092
     depends_on:
       - kafka
     entrypoint: /bin/bash

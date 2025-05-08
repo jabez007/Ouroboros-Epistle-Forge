@@ -66,8 +66,9 @@ class MessageEnvelope:
             TypeError: If header or body is not a dictionary
         """
 
+        expected = {"header", "body"}
         # A schema might legitimately allow {} in the body (e.g., a ping event).
-        if "header" not in data or "body" not in data or not data["header"]:
+        if set(data) != expected or not data["header"]:
             raise ValueError("Message must contain 'header' and 'body' sections")
 
         # Header must be truthy because required keys will be validated later

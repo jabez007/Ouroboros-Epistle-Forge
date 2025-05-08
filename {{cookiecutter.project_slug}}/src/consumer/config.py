@@ -1,6 +1,3 @@
-import os
-from dataclasses import dataclass, field
-
 """
 Centralised Kafka consumer configuration loaded from environment variables.
 
@@ -8,6 +5,10 @@ Example:
     >>> cfg = ConsumerConfig()
     >>> print(cfg.bootstrap_servers, cfg.group_id)
 """
+
+import os
+from dataclasses import dataclass, field
+
 
 @dataclass(frozen=True, slots=True)
 class ConsumerConfig:

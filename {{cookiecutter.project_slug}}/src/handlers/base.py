@@ -14,6 +14,17 @@ from src.models.envelope import MessageEnvelope
 
 logger = logging.getLogger(__name__)
 
+class ProcessingError(Exception):
+    """Base exception for all message processing errors"""
+    pass
+
+class RetryableError(ProcessingError):
+    """Error indicating message should be retried"""
+    pass
+
+class NonRetryableError(ProcessingError):
+    """Error indicating message should go to DLQ"""
+    pass
 
 class BaseHandler(abc.ABC):
     """
@@ -30,7 +41,11 @@ class BaseHandler(abc.ABC):
         self.max_retries = max_retries
     
     {% if cookiecutter.kafka_library == "confluent-kafka" %}
-    def handle(self, message_data: Dict[str, Any], retry_message: Callable[[MessageEnvelope, str], None], send_to_dlq: Callable[[str], None]) -> bool:
+    def handle(
+            self,
+            message_data: Dict[str, Any],
+            retry_message: Callable[[MessageEnvelope, str], None],
+            send_to_dlq: Callable[[str], None]) -> bool:
         """
         Process a message from Kafka.
         
@@ -52,12 +67,18 @@ class BaseHandler(abc.ABC):
             except (ValueError, TypeError):
                 logger.warning(f"Invalid retryCount value: {envelope.header.get('retryCount')}, using 0")
                 retry_count = 0
-            
+             
             try:
                 # Process the message
                 return self._process_message(envelope)
                 
-            except Exception as e:
+            except NonRetryableError as e:
+                logger.exception(f"Unrecoverable error processing message, sending to DLQ: {e}")
+
+                send_to_dlq(f"Error processing message: {str(e)}")
+                return True
+
+            except (RetryableError, Exception) as e:
                 logger.exception(f"Error processing message: {e}")
                 
                 # Check if we should retry
@@ -75,7 +96,11 @@ class BaseHandler(abc.ABC):
             send_to_dlq(f"Error parsing message envelope: {str(e)}")
             return True
     {% elif cookiecutter.kafka_library == "aiokafka" %}
-    async def handle(self, message_data: Dict[str, Any], retry_message: Callable[[MessageEnvelope, str], Awaitable[None]], send_to_dlq: Callable[[str], Awaitable[None]]) -> bool:
+    async def handle(
+            self,
+            message_data: Dict[str, Any],
+            retry_message: Callable[[MessageEnvelope, str], Awaitable[None]],
+            send_to_dlq: Callable[[str], Awaitable[None]]) -> bool:
         """
         Process a message from Kafka.
         
@@ -101,7 +126,13 @@ class BaseHandler(abc.ABC):
                 # Process the message
                 return await self._process_message(envelope)
                 
-            except Exception as e:
+            except NonRetryableError as e:
+                logger.exception(f"Unrecoverable error processing message, sending to DLQ: {e}")
+
+                await send_to_dlq(f"Error processing message: {str(e)}")
+                return True
+
+            except (RetryableError, Exception) as e:
                 logger.exception(f"Error processing message: {e}")
                 
                 # Check if we should retry

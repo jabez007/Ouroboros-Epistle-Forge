@@ -84,4 +84,7 @@ class MessageEnvelope:
         Returns:
             Dict: Dictionary representation of the envelope
         """
-        return {"header": self.header, "body": self.body}
+        return {
+            "header": dict(self.header),
+            "body": dict(self.body)
+        }

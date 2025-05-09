@@ -2,6 +2,7 @@
 Message envelope model that follows a SOAP-like structure with header and body.
 """
 
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict
 
@@ -85,6 +86,6 @@ class MessageEnvelope:
             Dict: Dictionary representation of the envelope
         """
         return {
-            "header": dict(self.header),
-            "body": dict(self.body)
+            "header": deepcopy(self.header),
+            "body": deepcopy(self.body)
         }

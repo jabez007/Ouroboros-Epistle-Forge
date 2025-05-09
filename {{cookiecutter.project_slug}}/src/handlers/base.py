@@ -55,7 +55,8 @@ class BaseHandler(abc.ABC):
             send_to_dlq: Callback function to send message to DLQ
             
         Returns:
-            bool: True if message was processed successfully, False otherwise
+            bool: True if the message was handled (successfully processed, sent to DLQ, or scheduled for retry),
+                  False if handling failed and the message should be reprocessed
         """
         try:
             # Parse the envelope structure
@@ -84,7 +85,7 @@ class BaseHandler(abc.ABC):
                 # Check if we should retry
                 if retry_count < self.max_retries:
                     logger.info(f"Retrying message, attempt {retry_count + 1} of {self.max_retries}")
-                    retry_message(envelope, repr(e))
+                    retry_message(envelope, str(e))
                     return True
                 else:
                     logger.warning(f"Max retries ({self.max_retries}) reached, sending to DLQ")
@@ -110,7 +111,8 @@ class BaseHandler(abc.ABC):
             send_to_dlq: Callback function to send message to DLQ
             
         Returns:
-            bool: True if message was processed successfully, False otherwise
+            bool: True if the message was handled (successfully processed, sent to DLQ, or scheduled for retry),
+                  False if handling failed and the message should be reprocessed
         """
         try:
             # Parse the envelope structure
@@ -138,7 +140,7 @@ class BaseHandler(abc.ABC):
                 # Check if we should retry
                 if retry_count < self.max_retries:
                     logger.info(f"Retrying message, attempt {retry_count + 1} of {self.max_retries}")
-                    await retry_message(envelope, repr(e))
+                    await retry_message(envelope, str(e))
                     return True
                 else:
                     logger.warning(f"Max retries ({self.max_retries}) reached, sending to DLQ")

@@ -29,7 +29,13 @@ services:
     develop:
       watch:
         - path: .
-          patterns: ["*.py"]
+          patterns: 
+            - "src/**/*.py"
+            {% if cookiecutter.use_poetry == 'no' %}
+            - "requirements.txt"
+            {% else %}
+            - "pyproject.toml"
+            {% endif %}
           action: rebuild
 
   kcat:

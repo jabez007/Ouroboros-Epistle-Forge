@@ -45,4 +45,4 @@ CMD [ "/app/src/main.py" ]
 
 # Health check - assumes your application responds to SIGTERM for graceful shutdown
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD ps -ef | grep -v grep | grep "python /app/src/main.py" || exit 1
+    CMD pgrep -f "python /app/src/main.py" || exit 1

@@ -158,6 +158,10 @@ class BaseHandler(abc.ABC):
         
         Args:
             envelope: Message envelope containing header and body
+
+        Returns:
+            bool: True if the message was successfully processed and should be committed,
+                  False if processing failed and the message should not be committed
         """
         pass
     {% elif cookiecutter.kafka_library == "aiokafka" %}
@@ -168,6 +172,10 @@ class BaseHandler(abc.ABC):
         
         Args:
             envelope: Message envelope containing header and body
+
+        Returns:
+            bool: True if the message was successfully processed and should be committed,
+                  False if processing failed and the message should not be committed
         """
         pass
     {% endif %}

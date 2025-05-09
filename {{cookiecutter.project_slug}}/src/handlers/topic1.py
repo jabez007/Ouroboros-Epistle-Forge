@@ -18,7 +18,7 @@ class Topic1Handler(BaseHandler):
             # return True to commit offset
             return True
         except ValidationError as e:
-            raise NonRetryableError(e)
+            raise NonRetryableError(f"Message validation failed: {e}") from e
         except Exception as e:
             logger.error(f"Error processing message: {e}", exc_info=True)
             # Depending on your error handling strategy, you might want to:
@@ -36,7 +36,7 @@ class Topic1Handler(BaseHandler):
             # return True to commit offset
             return True
         except ValidationError as e:
-            raise NonRetryableError(e)
+            raise NonRetryableError(f"Message validation failed: {e}") from e
         except Exception as e:
             logger.error(f"Error processing message: {e}", exc_info=True)
             # Depending on your error handling strategy, you might want to:

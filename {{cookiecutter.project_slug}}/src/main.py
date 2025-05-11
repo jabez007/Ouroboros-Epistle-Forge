@@ -1,6 +1,11 @@
 import logging
 import signal
 
+{% if cookiecutter.kafka_library == "aiokafka" %}
+import asyncio
+
+{% endif %}
+
 from src.consumer.kafka import KafkaConsumer
 from src.handlers.topic1 import Topic1Handler
 
@@ -64,6 +69,5 @@ async def main():
         raise
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
 {% endif%}

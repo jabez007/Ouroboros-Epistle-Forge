@@ -91,7 +91,7 @@ class MessageEnvelope:
 
         Returns:
             Dict: Deep copy dictionary representation of the envelope,
-+                 preventing mutation of the original envelope data
+                  preventing mutation of the original envelope data
         """
         return {
             "header": deepcopy(self.header),

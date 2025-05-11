@@ -431,8 +431,9 @@ class KafkaConsumer:
                                     self.metrics.message_failed(topic, "handler_failure")
                                     {% endif %}
                                     """
+                                    await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs.
+                                    break
                             except Exception as e:
-                                success = False
                                 logger.exception(f"Error processing message from {topic}: {e}")
                                 await self._send_to_dlq(topic, msg.value, str(e))
                                 await self.consumer.commit({tp: msg.offset + 1})
@@ -441,15 +442,12 @@ class KafkaConsumer:
                                 self.metrics.message_failed(topic, "exception")
                                 {% endif %}
                                 """
-                            finally:
-                                """
-                                {% if cookiecutter.include_prometheus_metrics == "yes" %}
+                            """
+                            {% if cookiecutter.include_prometheus_metrics == "yes" %}
+                            finally: # Note that finally will still execute if break or continue was called within the try/except block
                                 processing_timer.stop_and_record()
-                                {% endif %}
-                                """
-                                if not success:
-                                    await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs.
-                                    break
+                            {% endif %}
+                            """
 
                         if not success: # The safest approach is to stop all processing upon any failure
                             await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs. 

@@ -6,6 +6,7 @@ import json
 import logging
 import random
 import signal
+from copy import deepcopy
 from typing import Callable, Dict, Optional
 
 {% if cookiecutter.kafka_library == "confluent-kafka" %}
@@ -18,7 +19,6 @@ import asyncio
 from typing import Awaitable
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from aiokafka.structs import TopicPartition
 
 {% endif %}
 
@@ -231,7 +231,7 @@ class KafkaConsumer:
         envelope_copy = MessageEnvelope.from_dict(failed_message.to_dict())
 
         # Increment retry count for next attempt
-        envelope_copy.header = {**header}  # work on an isolated copy
+        envelope_copy.header = deepcopy(header)  # work on an isolated copy
         envelope_copy.header["retryCount"] = str(retry_count + 1)
 
         # Include metadata about original topic
@@ -374,9 +374,11 @@ class KafkaConsumer:
                 loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_shutdown(s)))
             except NotImplementedError:
                 # Fallback for Windows / non-main thread
+                main_loop = loop  # captured from outer scope
                 def _sync_shutdown_handler(_sig, _frame):
-                    loop = asyncio.get_running_loop()
-                    loop.call_soon_threadsafe(asyncio.create_task, self._handle_shutdown(_sig))
+                    main_loop.call_soon_threadsafe(
+                        lambda: asyncio.create_task(self._handle_shutdown(_sig))
+                    )
 
                 signal.signal(sig, _sync_shutdown_handler)
         
@@ -400,13 +402,14 @@ class KafkaConsumer:
                     for tp, messages in message_batch.items():
                         logger.info(f"Received {len(messages)} messages from {tp.topic}:{tp.partition}")
 
-                        topic = msg.topic
+                        topic = tp.topic
 
                         handler = self.handlers.get(topic)
                         if not handler:
                             logger.warning(f"No handler registered for topic {topic}")
                             continue
 
+                        success = True
                         for msg in messages:
                             logger.info(f"Working message ({msg.offset}) from topic {topic}")
 
@@ -514,7 +517,7 @@ class KafkaConsumer:
         envelope_copy = MessageEnvelope.from_dict(failed_message.to_dict())
 
         # Increment retry count for next attempt
-        envelope_copy.header = {**header} # work on an isolated copy 
+        envelope_copy.header = deepcopy(header) # work on an isolated copy 
         envelope_copy.header["retryCount"] = str(retry_count + 1)
 
         # Include metadata about original topic

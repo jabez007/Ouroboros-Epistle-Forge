@@ -32,7 +32,14 @@ class MessageEnvelope:
     across all topics. The body contains topic-specific data.
     """
 
-    _REQUIRED_HEADERS = ("messageType", "schemaName", "correlationId", "messageId", "timestamp", "producer")
+    _REQUIRED_HEADERS = {
+        "messageType",
+        "schemaName",
+        "correlationId",
+        "messageId",
+        "timestamp",
+        "producer"
+    }
 
     header: Dict[str, Any]
     body: Dict[str, Any]
@@ -42,7 +49,7 @@ class MessageEnvelope:
 
     def _validate_header(self, header: dict) -> None:
         # define required and allowed headers 
-        missing = [k for k in self._REQUIRED_HEADERS if k not in header]
+        missing = self._REQUIRED_HEADERS.difference(header)
         if missing:
             raise ValueError(f"Missing required header fields: {missing}")
 

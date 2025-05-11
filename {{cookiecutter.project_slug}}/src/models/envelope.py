@@ -83,7 +83,8 @@ class MessageEnvelope:
         Convert envelope to dictionary.
 
         Returns:
-            Dict: Dictionary representation of the envelope
+            Dict: Deep copy dictionary representation of the envelope,
++                 preventing mutation of the original envelope data
         """
         return {
             "header": deepcopy(self.header),

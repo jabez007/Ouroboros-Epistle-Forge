@@ -224,7 +224,7 @@ class KafkaConsumer:
         header = failed_message.header or {} # ensure not None
         try:
             retry_count = int(header.get("retryCount", 0))
-        except ValueError:
+        except (ValueError, TypeError):
             logger.warning(f"Invalid retryCount value: {header.get('retryCount')}, using 0")
             retry_count = 0
 
@@ -494,7 +494,7 @@ class KafkaConsumer:
         header = failed_message.header or {} # ensure not None
         try:
             retry_count = int(header.get("retryCount", 0))
-        except ValueError:
+        except (ValueError, TypeError):
             logger.warning(f"Invalid retryCount value: {header.get('retryCount')}, using 0")
             retry_count = 0
 

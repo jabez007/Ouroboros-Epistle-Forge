@@ -38,7 +38,7 @@ services:
             {% endif %}
           action: rebuild
 
-  kcat:
+  kcat: # Kafka CLI tool for testing and debugging Kafka topics
     image: edenhill/kcat:1.7.1
     environment:
       - KAFKA_BROKERS=kafka:9092

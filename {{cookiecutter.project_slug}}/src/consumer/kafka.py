@@ -124,7 +124,7 @@ class KafkaConsumer:
         
         try:
             while self.running:
-                msg = self.consumer.poll(timeout=1.0)
+                msg = self.consumer.poll(timeout=1.0) # 1 second
                 
                 if msg is None:
                     continue
@@ -390,28 +390,32 @@ class KafkaConsumer:
         try:
             while self.running:
                 try:
-                    async for msg in self.consumer:
-                        topic = msg.topic
-                        """
-                        {% if cookiecutter.include_prometheus_metrics == "yes" %}
-                        self.metrics.message_received(topic)
-                        processing_timer = self.metrics.start_processing_timer(topic)
-                        {% endif %}
-                        """
+                    # Poll with timeout (milliseconds)
+                    message_batch = await self.consumer.getmany(timeout_ms=1000)
 
-                        try:
-                            handler = self.handlers.get(topic)
-                            if not handler:
-                                logger.warning(f"No handler registered for topic {topic}")
-                                continue
-                            
+                    if not message_batch:
+                        continue
+
+                    # Process messages from all partitions
+                    for tp, messages in message_batch.items():
+                        logger.info(f"Received {len(messages)} messages from {tp.topic}:{tp.partition}")
+
+                        topic = msg.topic
+
+                        handler = self.handlers.get(topic)
+                        if not handler:
+                            logger.warning(f"No handler registered for topic {topic}")
+                            continue
+
+                        for msg in messages:
+                            logger.info(f"Working message ({msg.offset}) from topic {topic}")
+
                             # Parse message
                             try:
                                 message_data = json.loads(msg.value.decode('utf-8'))
                             except (UnicodeError, json.JSONDecodeError):
-                                logger.error(f"Failed to decode message as JSON from topic {topic}")
+                                logger.error(f"Failed to decode message ({msg.offset}) as JSON from topic {topic}")
                                 await self._send_to_dlq(topic, msg.value, "Invalid JSON format")
-                                tp = TopicPartition(msg.topic, msg.partition)
                                 await self.consumer.commit({tp: msg.offset + 1})
                                 """
                                 {% if cookiecutter.include_prometheus_metrics == "yes" %}
@@ -419,51 +423,60 @@ class KafkaConsumer:
                                 {% endif %}
                                 """
                                 continue
-                             
+                            
                             # Process message
-                            retry_callback = self._get_retry_callback(topic)
-                            dlq_callback = self._get_dlq_callback(topic, msg.value)
-                            
-                            success = await handler.handle(message_data, retry_callback, dlq_callback)
-                            
-                            if success:
-                                tp = TopicPartition(msg.topic, msg.partition)
+                            try:
+                                """
+                                {% if cookiecutter.include_prometheus_metrics == "yes" %}
+                                self.metrics.message_received(topic)
+                                processing_timer = self.metrics.start_processing_timer(topic)
+                                {% endif %}
+                                """
+                                retry_callback = self._get_retry_callback(topic)
+                                dlq_callback = self._get_dlq_callback(topic, msg.value)
+
+                                success = await handler.handle(message_data, retry_callback, dlq_callback)
+
+                                if success:
+                                    await self.consumer.commit({tp: msg.offset + 1})
+                                    """
+                                    {% if cookiecutter.include_prometheus_metrics == "yes" %}
+                                    self.metrics.message_processed(topic)
+                                    {% endif %}
+                                    """
+                                else:
+                                    logger.warning(f"Handler returned False for message ({msg.offset}) on topic {topic}")
+                                    """
+                                    {% if cookiecutter.include_prometheus_metrics == "yes" %}
+                                    self.metrics.message_failed(topic, "handler_failure")
+                                    {% endif %}
+                                    """
+                                    await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs. 
+                                    break
+                            except Exception as e:
+                                logger.exception(f"Error processing message from {topic}: {e}")
+                                await self._send_to_dlq(topic, msg.value, str(e))
                                 await self.consumer.commit({tp: msg.offset + 1})
                                 """
                                 {% if cookiecutter.include_prometheus_metrics == "yes" %}
-                                self.metrics.message_processed(topic)
+                                self.metrics.message_failed(topic, "exception")
                                 {% endif %}
                                 """
-                            else:
-                                logger.warning(f"Handler returned False for message in topic {topic}")
-                                await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs. 
-                                """
-                                {% if cookiecutter.include_prometheus_metrics == "yes" %}
-                                self.metrics.message_failed(topic, "handler_failure")
-                                {% endif %}
-                                """
-                            
-                        except Exception as e:
-                            logger.exception(f"Error processing message from {topic}: {e}")
-                            await self._send_to_dlq(topic, msg.value, str(e))
-                            tp = TopicPartition(msg.topic, msg.partition)
-                            await self.consumer.commit({tp: msg.offset + 1})
                             """
                             {% if cookiecutter.include_prometheus_metrics == "yes" %}
-                            self.metrics.message_failed(topic, "exception")
+                            finally:
+                                processing_timer.stop_and_record()
                             {% endif %}
                             """
-                        """
-                        {% if cookiecutter.include_prometheus_metrics == "yes" %}
-                        finally:
-                            processing_timer.stop_and_record()
-                        {% endif %}
-                        """
-                
+
+                        if not success: # The safest approach is to stop all processing upon any failure
+                            await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs. 
+                            break
+
                 except Exception as e:
                     logger.exception(f"Consumer error: {e}")
                     if self.running:
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs.
                     
         finally:
             logger.info("Closing consumer and producers")

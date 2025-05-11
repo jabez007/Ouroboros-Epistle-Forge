@@ -18,14 +18,14 @@ class ConsumerConfig:
     _FALSY_VALUES = {'false', '0', 'no'}
     _BOOLEAN_VALUES = _TRUTHY_VALUES | _FALSY_VALUES
 
-    _VALID_OFFSET_RESET = ("earliest", "latest", "none")
+    _VALID_OFFSET_RESET = frozenset({"earliest", "latest", "none"})
 
-    bootstrap_servers: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}")
-    group_id: str = os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}")
-    auto_offset_reset: str = os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold()
+    bootstrap_servers: str = field(default_factory=lambda: os.getenv("KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}"))
+    group_id: str = field(default_factory=lambda: os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}"))
+    auto_offset_reset: str = field(default_factory=lambda: os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold())
     auto_commit_offset: bool = field(init=False)
 
-    def __post_init__(self): 
+    def __post_init__(self):
         # Convert string values to appropriate types
         raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
         if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:

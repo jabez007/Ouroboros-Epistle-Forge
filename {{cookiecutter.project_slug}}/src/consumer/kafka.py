@@ -5,7 +5,6 @@ import datetime
 import json
 import logging
 import random
-import signal
 from copy import deepcopy
 from typing import Callable, Dict, Optional
 
@@ -59,14 +58,6 @@ class KafkaConsumer:
         {% endif %}
         """
         
-        # Set up signal handlers for graceful shutdown
-        {% if cookiecutter.kafka_library == "confluent-kafka" %}
-        signal.signal(signal.SIGTERM, self._handle_shutdown)
-        signal.signal(signal.SIGINT, self._handle_shutdown)
-        {% elif cookiecutter.kafka_library == "aiokafka" %}
-        # Defer signal-handler registration until you’re inside the running loop
-        {% endif %}
-
         {% if cookiecutter.kafka_library == "confluent-kafka" %}
         # Configure Kafka consumer
         self.consumer = Consumer({
@@ -367,21 +358,6 @@ class KafkaConsumer:
         
         await self.consumer.start()
 
-        # register signals on the running loop
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            try:
-                loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(self._handle_shutdown(s)))
-            except NotImplementedError:
-                # Fallback for Windows / non-main thread
-                main_loop = loop  # captured from outer scope
-                def _sync_shutdown_handler(_sig, _frame, _loop=main_loop):
-                    _loop.call_soon_threadsafe(
-                        lambda: asyncio.create_task(self._handle_shutdown(_sig))
-                    )
-
-                signal.signal(sig, _sync_shutdown_handler)
-        
         await self.retry_producer.start()
         await self.dlq_producer.start()
         

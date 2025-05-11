@@ -1,6 +1,10 @@
 # syntax=docker/dockerfile:1.4
 FROM python:{{ cookiecutter.python_version }}-slim as base
 
+LABEL maintainer="{{ cookiecutter.author_name}} <{{ cookiecutter.author_email}}>"
+LABEL description="{{ cookiecutter.project_description }}"
+LABEL version="0.1.0"
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
@@ -30,9 +34,14 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 COPY requirements.txt /app/
 
 # Install dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
+RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 {% endif %}
+
+# Clean up to reduce image size
+RUN apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy project files with appropriate ownership
 COPY --chown=appuser:appuser . /app/

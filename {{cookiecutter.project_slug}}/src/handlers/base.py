@@ -38,7 +38,7 @@ class BaseHandler(abc.ABC):
         Args:
             max_retries: Maximum number of retry attempts before sending to DLQ
         """
-        self.max_retries = max_retries
+        self._max_retries = max_retries
     
     {% if cookiecutter.kafka_library == "confluent-kafka" %}
     def handle(
@@ -87,12 +87,12 @@ class BaseHandler(abc.ABC):
             logger.exception(f"Error processing message: {e}")
                 
             # Check if we should retry
-            if retry_count < self.max_retries:
-                logger.info(f"Retrying message, attempt {retry_count + 1} of {self.max_retries}")
+            if retry_count < self._max_retries:
+                logger.info(f"Retrying message, attempt {retry_count + 1} of {self._max_retries}")
                 retry_message(envelope, str(e))
                 return True
             else:
-                logger.warning(f"Max retries ({self.max_retries}) reached, sending to DLQ")
+                logger.warning(f"Max retries ({self._max_retries}) reached, sending to DLQ")
                 send_to_dlq(f"Max retries reached: {str(e)}")
                 return True
     {% elif cookiecutter.kafka_library == "aiokafka" %}
@@ -140,12 +140,12 @@ class BaseHandler(abc.ABC):
             logger.exception(f"Error processing message: {e}")
 
             # Check if we should retry
-            if retry_count < self.max_retries:
-                logger.info(f"Retrying message, attempt {retry_count + 1} of {self.max_retries}")
+            if retry_count < self._max_retries:
+                logger.info(f"Retrying message, attempt {retry_count + 1} of {self._max_retries}")
                 await retry_message(envelope, str(e))
                 return True
             else:
-                logger.warning(f"Max retries ({self.max_retries}) reached, sending to DLQ")
+                logger.warning(f"Max retries ({self._max_retries}) reached, sending to DLQ")
                 await send_to_dlq(f"Max retries reached: {str(e)}")
                 return True
     {% endif %}

@@ -22,7 +22,7 @@ class ConsumerConfig:
 
     _VALID_OFFSET_RESET = frozenset({"earliest", "latest", "none"})
 
-    bootstrap_servers: Optional[str] = field(default_factory=lambda: None)
+    bootstrap_servers: Optional[list[str]] = field(default_factory=lambda: None)
     group_id: str = field(default_factory=lambda: os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}"))
     auto_offset_reset: str = field(default_factory=lambda: os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold())
     auto_commit_offset: Optional[bool] = field(default_factory=lambda: None)

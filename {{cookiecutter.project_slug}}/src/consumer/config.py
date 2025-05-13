@@ -22,9 +22,16 @@ class ConsumerConfig:
 
     _VALID_OFFSET_RESET = frozenset({"earliest", "latest", "none"})
 
+    # List of Kafka broker addresses (host:port)
     bootstrap_servers: Optional[list[str]] = field(default_factory=lambda: None)
+
+    # Consumer group identifier for this consumer instance
     group_id: str = field(default_factory=lambda: os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}"))
+
+    # Position to start reading when no offset is stored ('earliest', 'latest', 'none')
     auto_offset_reset: str = field(default_factory=lambda: os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold())
+
+    # Whether offsets should be automatically committed
     auto_commit_offset: Optional[bool] = field(default_factory=lambda: None)
 
     def __post_init__(self):

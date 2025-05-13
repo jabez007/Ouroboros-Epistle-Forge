@@ -48,6 +48,8 @@ COPY --chown=appuser:appuser . /app/
 
 USER appuser
 
+ENV PYTHONPATH "${PYTHONPATH}:/app/src"
+
 # Default CMD to run consumer
 ENTRYPOINT [ "python" ]
 CMD [ "/app/src/main.py" ]

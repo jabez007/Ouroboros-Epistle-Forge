@@ -6,8 +6,10 @@ Example:
     >>> print(cfg.bootstrap_servers, cfg.group_id)
 """
 
+import json
 import os
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,20 +22,48 @@ class ConsumerConfig:
 
     _VALID_OFFSET_RESET = frozenset({"earliest", "latest", "none"})
 
-    bootstrap_servers: str = field(default_factory=lambda: os.getenv("KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}"))
+    bootstrap_servers: Optional[str] = field(default_factory=lambda: None)
     group_id: str = field(default_factory=lambda: os.getenv("KAFKA_GROUP_ID", "{{cookiecutter.consumer_group_id}}"))
     auto_offset_reset: str = field(default_factory=lambda: os.getenv("KAFKA_AUTO_OFFSET_RESET", "earliest").casefold())
-    auto_commit_offset: bool = field(init=False)
+    auto_commit_offset: Optional[bool] = field(default_factory=lambda: None)
 
     def __post_init__(self):
-        # Convert string values to appropriate types
-        raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
-        if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:
-            raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
-        object.__setattr__(self, 'auto_commit_offset', self._str_to_bool(raw_auto_commit))
+        self._init_bootstrap_servers()
+
+        self._init_auto_commit_offset()
 
         # Validate values
         self._validate_config()
+
+    def _init_bootstrap_servers(self):
+        if self.bootstrap_servers is None:
+            # Get brokers from environment variable
+            brokers_env = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "{{cookiecutter.default_bootstrap_servers}}")
+            try:
+                # Try to parse as JSON (for list format)
+                brokers = json.loads(brokers_env)
+                # If it's a string after parsing, put it in a list
+                if isinstance(brokers, str):
+                    brokers = [brokers]
+                # If it's a list, keep it as is
+                elif isinstance(brokers, list):
+                    pass
+                else:
+                    # Fallback for unexpected types
+                    brokers = [brokers_env]
+            except json.JSONDecodeError:
+                # Not valid JSON, treat as a single broker string
+                brokers = [brokers_env]
+
+            object.__setattr__(self, 'bootstrap_servers', brokers)
+
+    def _init_auto_commit_offset(self):
+        if self.auto_commit_offset is None:
+            # Convert string values to appropriate types
+            raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
+            if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:
+                raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
+            object.__setattr__(self, 'auto_commit_offset', self._str_to_bool(raw_auto_commit))
 
     def _str_to_bool(self, value: str) -> bool:
         """Convert string 'true'/'false' to boolean."""

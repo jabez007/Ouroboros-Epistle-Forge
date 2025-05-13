@@ -49,8 +49,8 @@ class ConsumerConfig:
                 elif isinstance(brokers, list):
                     pass
                 else:
-                    # Fallback for unexpected types
-                    brokers = [brokers_env]
+                    # Raise error for unexpected types after JSON parsing
+                    raise ValueError(f"KAFKA_BOOTSTRAP_SERVERS must be a string or list, got {type(brokers)}")
             except json.JSONDecodeError:
                 # Not valid JSON, treat as a single broker string
                 brokers = [brokers_env]
@@ -75,6 +75,14 @@ class ConsumerConfig:
         if not self.bootstrap_servers:
             raise ValueError("KAFKA_BOOTSTRAP_SERVERS must not be empty")
         
+        # Validate each broker string format
+        for broker in self.bootstrap_servers:
+            if not isinstance(broker, str) or not broker:
+                raise ValueError(f"Each bootstrap server must be a non-empty string, got {broker}")
+            # Optional: Add more strict validation if needed
+            # if ":" not in broker:
+            #     raise ValueError(f"Each bootstrap server should be in format 'host:port', got {broker}")
+
         # Validate group_id is not empty
         if not self.group_id:
             raise ValueError("KAFKA_GROUP_ID must not be empty")

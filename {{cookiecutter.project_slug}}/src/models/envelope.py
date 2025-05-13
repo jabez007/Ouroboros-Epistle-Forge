@@ -49,12 +49,12 @@ class MessageEnvelope:
 
     def _validate_header(self, header: dict) -> None:
         # define required and allowed headers 
-        missing = self._REQUIRED_HEADERS.difference(header.keys())
+        missing = self._REQUIRED_HEADERS.difference(header)
         if missing:
             raise ValueError(f"Missing required header fields: {missing}")
 
         # catch any unexpected header keys
-        unexpected = [k for k in header.keys() if k not in COMMON_HEADER_FIELDS]
+        unexpected = [k for k in header if k not in COMMON_HEADER_FIELDS]
         if unexpected:
             raise ValueError(f"Unexpected header fields: {unexpected}")
 

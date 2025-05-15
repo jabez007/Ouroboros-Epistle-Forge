@@ -88,6 +88,8 @@ class KafkaConsumer:
         self.dlq_producer: Optional[AIOKafkaProducer] = None
         {% endif %}
 
+        logger.debug("KafkaConsumer initialized with config: %s", self.config)
+
     def register_handler(self, topic: str, handler: BaseHandler) -> None:
         """
         Register a handler for a specific topic.
@@ -108,6 +110,7 @@ class KafkaConsumer:
         
         # Subscribe to topics
         topics = list(self.handlers.keys())
+        logger.info("Topics to subscribe: %s", topics)
         self.consumer.subscribe(topics)
         logger.info(f"Subscribed to topics: {', '.join(topics)}")
         
@@ -127,6 +130,8 @@ class KafkaConsumer:
                         logger.error(f"Kafka error: {msg.error()}")
                     continue
                 
+                logger.info("Received message offset=%d from %s:%d", msg.offset(), msg.topic(), msg.partition())
+
                 topic = msg.topic()
                 """
                 {% if cookiecutter.include_prometheus_metrics == "yes" %}
@@ -145,7 +150,7 @@ class KafkaConsumer:
                     try:
                         message_data = json.loads(msg.value().decode('utf-8'))
                     except (UnicodeError, json.JSONDecodeError):
-                        logger.error(f"Failed to decode message as JSON from topic {topic}")
+                        logger.error(f"Failed to decode message ({msg.offset()}) as JSON from topic {topic}")
                         self._send_to_dlq(topic, msg.value(), "Invalid JSON format")
                         self.consumer.commit(msg)
                         """
@@ -156,9 +161,11 @@ class KafkaConsumer:
                         continue
                     
                     # Process message
+                    logger.debug("Processing message offset=%d from topic=%s", msg.offset(), topic)
                     success = handler.handle(message_data, self._get_retry_callback(topic), self._get_dlq_callback(topic, msg.value()))
                     
                     if success:
+                        logger.info("Successfully processed message offset=%d on topic=%s", msg.offset(), topic)
                         self.consumer.commit(msg)
                         """
                         {% if cookiecutter.include_prometheus_metrics == "yes" %}
@@ -166,7 +173,7 @@ class KafkaConsumer:
                         {% endif %}
                         """
                     else:
-                        logger.warning(f"Handler returned False for message in topic {topic}")
+                        logger.warning(f"Handler returned False for message ({msg.offset()}) on topic {topic}")
                         sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs. 
                         """
                         {% if cookiecutter.include_prometheus_metrics == "yes" %}
@@ -175,7 +182,7 @@ class KafkaConsumer:
                         """
                     
                 except Exception as e:
-                    logger.exception(f"Error processing message from {topic}: {e}")
+                    logger.exception(f"Error processing message ({msg.offset()}) from {topic}: {e}")
                     self._send_to_dlq(topic, msg.value(), str(e))
                     self.consumer.commit(msg)
                     """
@@ -335,10 +342,10 @@ class KafkaConsumer:
         if not self.handlers:
             logger.error("No handlers registered. Exiting.")
             return
-        
+
         # Subscribe to topics
         topics = list(self.handlers.keys())
-        
+        logger.info("Topics to subscribe: %s", topics)
         # Initialize consumer and producer
         self.consumer = AIOKafkaConsumer(
             *topics,
@@ -347,7 +354,7 @@ class KafkaConsumer:
             auto_offset_reset=self.config.auto_offset_reset,
             enable_auto_commit=False,
         )
-        
+
         self.retry_producer = AIOKafkaProducer(
             bootstrap_servers=self.config.bootstrap_servers,
         )
@@ -355,14 +362,16 @@ class KafkaConsumer:
         self.dlq_producer = AIOKafkaProducer(
             bootstrap_servers=self.config.bootstrap_servers,
         )
-        
-        await self.consumer.start()
 
+        logger.info("Starting Kafka consumer")
+        await self.consumer.start()
+        logger.info(f"Subscribed to topics: {', '.join(topics)}")
+
+        logger.info("Starting Kafka producers")
         await self.retry_producer.start()
         await self.dlq_producer.start()
-        
-        logger.info(f"Subscribed to topics: {', '.join(topics)}")
-        
+        logger.info("Kafka consumer and producers started successfully")
+
         self.running = True
         
         try:
@@ -418,6 +427,7 @@ class KafkaConsumer:
                                 success = await handler.handle(message_data, retry_callback, dlq_callback)
 
                                 if success:
+                                    logger.info("Successfully processed message offset=%d on topic=%s", msg.offset, topic)
                                     await self.consumer.commit({tp: msg.offset + 1})
                                     """
                                     {% if cookiecutter.include_prometheus_metrics == "yes" %}
@@ -434,7 +444,7 @@ class KafkaConsumer:
                                     await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs.
                                     break
                             except Exception as e:
-                                logger.exception(f"Error processing message from {topic}: {e}")
+                                logger.exception(f"Error processing message ({msg.offset}) from {topic}: {e}")
                                 await self._send_to_dlq(topic, msg.value, str(e))
                                 await self.consumer.commit({tp: msg.offset + 1})
                                 """
@@ -459,17 +469,20 @@ class KafkaConsumer:
                         await asyncio.sleep(random.uniform(1, 3)) # avoid hammering both the broker and our logs.
                     
         finally:
-            logger.info("Closing consumer and producers")
+            logger.info("Closing Kafka consumer and producers")
             await self._shutdown_resources()
 
     async def _shutdown_resources(self):
         """Shutdown all resources in the correct order."""
         logger.info("Closing producers and consumer")
         if getattr(self, "consumer", None) and self.consumer._closed is False:
+            logger.debug("Stopping Kafka consumer")
             await self.consumer.stop()
         if getattr(self, "retry_producer", None) and self.retry_producer._closed is False:
+            logger.debug("Stopping Kafka retry producer")
             await self.retry_producer.stop()
         if getattr(self, "dlq_producer", None) and self.dlq_producer._closed is False:
+            logger.debug("Stopping Kafka DLQ producer")
             await self.dlq_producer.stop()
 
     async def _retry_message(self, original_topic: str, failed_message: MessageEnvelope, reason: str) -> None:

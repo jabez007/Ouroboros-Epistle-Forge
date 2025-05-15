@@ -7,9 +7,12 @@ Example:
 """
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +65,7 @@ class ConsumerConfig:
                 # Not valid JSON, treat as a single broker string
                 brokers = [brokers_env]
 
+            logger.debug(f"Parsed bootstrap servers: {brokers}")
             object.__setattr__(self, 'bootstrap_servers', brokers)
 
     def _init_auto_commit_offset(self):
@@ -69,8 +73,11 @@ class ConsumerConfig:
             # Convert string values to appropriate types
             raw_auto_commit = os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "false")
             if raw_auto_commit.casefold() not in self._BOOLEAN_VALUES:
-                raise ValueError("KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value")
-            object.__setattr__(self, 'auto_commit_offset', self._str_to_bool(raw_auto_commit))
+                raise ValueError(f"KAFKA_ENABLE_AUTO_COMMIT must be a boolean-like value, got '{raw_auto_commit}'")
+
+            auto_commit = self._str_to_bool(raw_auto_commit)
+            logger.debug(f"Parsed auto commit offset: {auto_commit}")
+            object.__setattr__(self, 'auto_commit_offset', auto_commit)
 
     def _str_to_bool(self, value: str) -> bool:
         """Convert string 'true'/'false' to boolean."""
